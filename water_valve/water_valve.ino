@@ -64,14 +64,14 @@ const auto sendSensorEvent = [](AsyncEventSource& eventSource, int reading, bool
 };
 
 const auto configureServerRoutes = [](AsyncWebServer& srv, Servo& servo, int pin, AsyncEventSource& eventSource) -> void {
-  srv.on("/open", HTTP_GET, [&servo, pin](AsyncWebServerRequest *request) {
+  srv.on("/open", HTTP_POST, [&servo, pin](AsyncWebServerRequest *request) {
     Serial.println("Received open request - waking from light sleep");
     moveServoTo(servo, openAngle, pin);
     request->send(200, "text/plain", "Valve opened");
     Serial.println("Returning to light sleep with servo detached");
   });
   
-  srv.on("/close", HTTP_GET, [&servo, pin](AsyncWebServerRequest *request) {
+  srv.on("/close", HTTP_POST, [&servo, pin](AsyncWebServerRequest *request) {
     Serial.println("Received close request - waking from light sleep");
     moveServoTo(servo, closeAngle, pin);
     request->send(200, "text/plain", "Valve closed");

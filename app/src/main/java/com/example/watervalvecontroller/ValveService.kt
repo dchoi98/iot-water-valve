@@ -33,7 +33,7 @@ class ValveService(private val baseUrl: String = "http://192.168.0.206") {
 
     private suspend fun executeValveOperation(endpoint: String): ValveResult {
         return try {
-            val response: HttpResponse = client.get("$baseUrl$endpoint")
+            val response: HttpResponse = client.post("$baseUrl$endpoint")
 
             // Check if response indicates success (200-299 status codes)
             if (response.status.value in 200..299) {
