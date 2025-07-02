@@ -7,17 +7,15 @@ import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
-import okhttp3.sse.EventSource
-import okhttp3.sse.EventSourceListener
-import okhttp3.sse.EventSources
+import org.eclipse.paho.client.mqttv3.*
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.json.JSONObject
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.concurrent.TimeUnit
 
+/**
+ * Foreground service that monitors water sensor via MQTT
+ */
 class SensorMonitorService : Service() {
 
     companion object {
@@ -26,27 +24,30 @@ class SensorMonitorService : Service() {
         const val ALERT_NOTIFICATION_ID = 2
         const val ACTION_STOP = "com.example.watervalvecontroller.STOP_SERVICE"
 
-        // Persistent alert state - survives ViewModel recreation
         private val _alertState = MutableStateFlow<SensorEvent?>(null)
         val alertState: StateFlow<SensorEvent?> = _alertState.asStateFlow()
 
-        // Singleton flow for sharing sensor events across the app
         private val _globalSensorEvents = MutableSharedFlow<SensorEvent>(
             replay = 1,
             onBufferOverflow = BufferOverflow.DROP_OLDEST
         )
         val globalSensorEvents: SharedFlow<SensorEvent> = _globalSensorEvents.asSharedFlow()
 
-        // Function to clear alert state (called from ViewModel)
         fun clearAlert() {
             _alertState.value = null
         }
     }
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var eventSource: EventSource? = null
+    private var mqttClient: MqttClient? = null
     private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     private var lastNotificationReading = 0
+
+    // Adafruit IO credentials
+    private val aioUsername = "myUsername"
+    private val aioKey = "myKey"
+    private val brokerUrl = "ssl://io.adafruit.com:8883"
+    private val clientId = "WaterSensorMonitor_${System.currentTimeMillis()}"
 
     data class SensorEvent(
         val reading: Int,
@@ -58,7 +59,7 @@ class SensorMonitorService : Service() {
         super.onCreate()
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createForegroundNotification())
-        connectToSSE()
+        connectToMQTT()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -77,7 +78,7 @@ class SensorMonitorService : Service() {
             "Water Sensor Monitoring",
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "Monitors water sensor and alerts when water detected"
+            description = "Monitors water sensor via Adafruit IO"
             setShowBadge(true)
         }
 
@@ -88,45 +89,58 @@ class SensorMonitorService : Service() {
     private fun createForegroundNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Water Sensor Active")
-            .setContentText("Monitoring for water detection")
+            .setContentText("Monitoring via Adafruit IO")
             .setSmallIcon(android.R.drawable.ic_menu_info_details)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .build()
     }
 
-    private fun connectToSSE() {
-        val client = OkHttpClient.Builder()
-            .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(0, TimeUnit.MINUTES) // No timeout for SSE
-            .build()
+    private fun connectToMQTT() {
+        serviceScope.launch {
+            try {
+                mqttClient = MqttClient(brokerUrl, clientId, MemoryPersistence())
 
-        val request = Request.Builder()
-            .url("http://192.168.0.206/events")
-            .header("Accept", "text/event-stream")
-            .build()
+                val options = MqttConnectOptions().apply {
+                    userName = aioUsername
+                    password = aioKey.toCharArray()
+                    isCleanSession = true
+                    connectionTimeout = 10
+                    keepAliveInterval = 30
+                }
 
-        val listener = createEventSourceListener()
-        eventSource = EventSources.createFactory(client).newEventSource(request, listener)
-    }
+                mqttClient?.setCallback(createMqttCallback())
+                mqttClient?.connect(options)
 
-    private fun createEventSourceListener() = object : EventSourceListener() {
-        override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
-            when (type) {
-                "sensor" -> handleSensorEvent(data)
+                // Subscribe to sensor feed
+                val topic = "$aioUsername/feeds/water-sensor"
+                mqttClient?.subscribe(topic, 1)
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // Retry connection after delay
+                delay(5000)
+                connectToMQTT()
             }
         }
+    }
 
-        override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {
-            // Retry connection after delay
+    private fun createMqttCallback() = object : MqttCallback {
+        override fun connectionLost(cause: Throwable?) {
             serviceScope.launch {
                 delay(5000)
-                connectToSSE()
+                connectToMQTT()
             }
         }
+
+        override fun messageArrived(topic: String?, message: MqttMessage?) {
+            message?.let { handleSensorMessage(String(it.payload)) }
+        }
+
+        override fun deliveryComplete(token: IMqttDeliveryToken?) {}
     }
 
-    private fun handleSensorEvent(data: String) {
+    private fun handleSensorMessage(data: String) {
         try {
             val json = JSONObject(data)
             val event = SensorEvent(
@@ -134,7 +148,6 @@ class SensorMonitorService : Service() {
                 triggered = json.getBoolean("triggered")
             )
 
-            // Emit event to global Flow for ViewModel consumption
             serviceScope.launch {
                 _globalSensorEvents.emit(event)
             }
@@ -169,7 +182,7 @@ class SensorMonitorService : Service() {
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("⚠️ Water Detected!")
-            .setContentText("Valve automatically closed $currentDateTime")
+            .setContentText("Valve automatically closed at $currentDateTime")
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -184,7 +197,12 @@ class SensorMonitorService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        eventSource?.cancel()
+        try {
+            mqttClient?.disconnect()
+            mqttClient?.close()
+        } catch (e: Exception) {
+            // Ignore cleanup errors
+        }
         serviceScope.cancel()
     }
 }

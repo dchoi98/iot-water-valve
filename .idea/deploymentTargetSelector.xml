@@ -4,7 +4,7 @@
     <selectionStates>
       <SelectionState runConfigName="Water Valve Controller">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-06-14T08:53:20.581472600Z">
+        <DropdownSelection timestamp="2025-07-01T22:38:06.156162500Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="PhysicalDevice" identifier="serial=RFCN80ANYMH" />

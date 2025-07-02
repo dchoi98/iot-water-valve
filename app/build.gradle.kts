@@ -58,14 +58,12 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    // HTTP client
-    implementation(libs.ktor.client.android)
-    implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.ktor.serialization.kotlinx.json)
+    // MQTT client for Adafruit IO
+    implementation(libs.org.eclipse.paho.client.mqttv3)
+    implementation(libs.org.eclipse.paho.android.service)
 
-    // SSE support
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.sse)
+    // JSON parsing
+    implementation(libs.json)
 
     // Lifecycle and state management
     implementation(libs.androidx.lifecycle.viewmodel.compose)
