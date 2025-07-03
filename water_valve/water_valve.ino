@@ -87,15 +87,20 @@ const auto configurePowerManagement = []() -> void {
 };
 
 const auto connectToWiFi = [](const char* network, const char* pass) -> void {
-    WiFi.begin(network, pass);
+    if (WiFi.status() == WL_CONNECTED) return;
+
+    pinMode(LED_BUILTIN, OUTPUT);
 
     while (WiFi.status() != WL_CONNECTED) {
-        pinMode(LED_BUILTIN, OUTPUT);
-        digitalWrite(LED_BUILTIN, LOW);
-        delay(200);
-        digitalWrite(LED_BUILTIN, HIGH);
-        delay(200);
+        WiFi.begin(kSsid, kPassword);
         Serial.println("Connecting to WiFi...");
+
+        for (int cycle = 0; cycle < 5; cycle++) {
+            digitalWrite(LED_BUILTIN, LOW);
+            delay(200);
+            digitalWrite(LED_BUILTIN, HIGH);
+            delay(200);
+        }
     }
 
     Serial.print("Connected! IP: ");
@@ -108,18 +113,13 @@ const auto connectToMQTT = [](Adafruit_MQTT_Client& mqttClient) -> void {
 
     Serial.println("Connecting to Adafruit IO MQTT...");
     int8_t ret;
-    uint8_t retries = 3;
 
     while ((ret = mqttClient.connect()) != 0) {
+        connectToWiFi(kSsid, kPassword);
         Serial.println(mqttClient.connectErrorString(ret));
         Serial.println("Retrying MQTT connection in 5 seconds...");
         mqttClient.disconnect();
         delay(5000);
-
-        if (retries-- == 0) {
-            Serial.println("Failed to connect to MQTT. Restarting...");
-            ESP.restart();
-        }
     }
 
     Serial.println("MQTT Connected!");

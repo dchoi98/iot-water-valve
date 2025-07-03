@@ -101,7 +101,7 @@ class ValveViewModel(application: Application) : AndroidViewModel(application) {
             val result = valveService.openValve()
 
             _uiState.value = when (result) {
-                is ValveService.ValveResult.Success -> UiState.Success("Valve opened successfully")
+                is ValveService.ValveResult.Success -> UiState.Success("Opening valve")
                 is ValveService.ValveResult.Error -> UiState.Error(result.message)
             }
 
@@ -119,7 +119,7 @@ class ValveViewModel(application: Application) : AndroidViewModel(application) {
             val result = valveService.closeValve()
 
             _uiState.value = when (result) {
-                is ValveService.ValveResult.Success -> UiState.Success("Valve closed successfully")
+                is ValveService.ValveResult.Success -> UiState.Success("Closing valve")
                 is ValveService.ValveResult.Error -> UiState.Error(result.message)
             }
 
