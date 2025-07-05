@@ -70,7 +70,7 @@ class ValveViewModel(application: Application) : AndroidViewModel(application) {
         SensorMonitorService.globalSensorEvents
             .onEach { event ->
                 // Update UI state when water detected (reading >= 1000 or triggered flag)
-                if (event.reading >= 1000 || event.triggered) {
+                if (event.reading >= 1000) {
                     _uiState.value = UiState.SensorAlert(event.timestamp)
                 }
             }
@@ -101,7 +101,7 @@ class ValveViewModel(application: Application) : AndroidViewModel(application) {
             val result = valveService.openValve()
 
             _uiState.value = when (result) {
-                is ValveService.ValveResult.Success -> UiState.Success("Opening valve")
+                is ValveService.ValveResult.Success -> UiState.Success("Opened valve")
                 is ValveService.ValveResult.Error -> UiState.Error(result.message)
             }
 
@@ -119,7 +119,7 @@ class ValveViewModel(application: Application) : AndroidViewModel(application) {
             val result = valveService.closeValve()
 
             _uiState.value = when (result) {
-                is ValveService.ValveResult.Success -> UiState.Success("Closing valve")
+                is ValveService.ValveResult.Success -> UiState.Success("Closed valve")
                 is ValveService.ValveResult.Error -> UiState.Error(result.message)
             }
 

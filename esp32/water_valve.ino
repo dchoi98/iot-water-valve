@@ -24,14 +24,12 @@ static constexpr int kCloseAngle = 9;
 static constexpr int kOpenAngle = 98;
 
 // Sensor state
-bool triggered = false;
 int data = 0;
-int lastData = 0;
 static unsigned long lastSensorRead = 0;
 static constexpr unsigned long kSensorInterval = 5000;
 
 // io.adafruit.com root CA
-const char* adafruitio_root_ca = \
+const char* kAdafruitIoRootCa = \
       "-----BEGIN CERTIFICATE-----\n"
       "MIIEjTCCA3WgAwIBAgIQDQd4KhM/xvmlcpbhMf/ReTANBgkqhkiG9w0BAQsFADBh\n"
       "MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\n"
@@ -126,8 +124,8 @@ const auto connectToMQTT = [](Adafruit_MQTT_Client& mqttClient) -> void {
 };
 
 // Sensor data publishing
-const auto publishSensorData = [](Adafruit_MQTT_Publish& feed, int reading, bool triggered) -> void {
-    String json = "{\"reading\":" + String(reading) + ",\"triggered\":" + (triggered ? "true" : "false") + "}";
+const auto publishSensorData = [](Adafruit_MQTT_Publish& feed, int reading) -> void {
+    String json = "{\"reading\":" + String(reading) + "}";
 
     if (!feed.publish(json.c_str())) {
         Serial.println("Failed to publish sensor data");
@@ -159,13 +157,15 @@ void setup() {
     connectToWiFi(kSsid, kPassword);
 
     // Set Adafruit IO's root CA
-    client.setCACert(adafruitio_root_ca);
+    client.setCACert(kAdafruitIoRootCa);
 
     // Subscribe to valve control feed
     mqtt.subscribe(&valveControlFeed);
 
     Serial.println("Servo configured for pin " + String(kServoPin) + " (attach-on-demand)");
     Serial.println("MQTT TLS setup complete. Device will enter light sleep when idle...");
+
+    publishSensorData(waterSensorFeed, data);
 }
 
 void loop() {
@@ -183,16 +183,13 @@ void loop() {
     // Read and publish sensor data
     if (millis() - lastSensorRead >= kSensorInterval) {
         data = analogRead(kWaterSensorPin);
-        triggered = (data >= 1000 && lastData < 1000);
-
-        publishSensorData(waterSensorFeed, data, triggered);
 
         // Auto-close valve if water detected
-        if (triggered) {
+        if (data >= 1000) {
             moveServoTo(myServo, kCloseAngle, kServoPin);
+            publishSensorData(waterSensorFeed, data);
         }
 
-        lastData = data;
         lastSensorRead = millis();
     }
 

@@ -41,7 +41,6 @@ class SensorMonitorService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var mqttClient: MqttClient? = null
     private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-    private var lastNotificationReading = 0
 
     // Adafruit IO credentials
     private val aioUsername = "myUsername"
@@ -51,7 +50,6 @@ class SensorMonitorService : Service() {
 
     data class SensorEvent(
         val reading: Int,
-        val triggered: Boolean,
         val timestamp: Long = System.currentTimeMillis()
     )
 
@@ -144,8 +142,7 @@ class SensorMonitorService : Service() {
         try {
             val json = JSONObject(data)
             val event = SensorEvent(
-                reading = json.getInt("reading"),
-                triggered = json.getBoolean("triggered")
+                reading = json.getInt("reading")
             )
 
             serviceScope.launch {
@@ -153,16 +150,10 @@ class SensorMonitorService : Service() {
             }
 
             // Update persistent alert state if water detected
-            if (event.reading >= 1000 || event.triggered) {
+            if (event.reading >= 1000) {
                 _alertState.value = event
-            }
-
-            // Show alert notification if water detected
-            if (event.reading >= 1000 && lastNotificationReading < 1000) {
                 showWaterDetectedNotification()
             }
-
-            lastNotificationReading = event.reading
 
         } catch (e: Exception) {
             e.printStackTrace()
