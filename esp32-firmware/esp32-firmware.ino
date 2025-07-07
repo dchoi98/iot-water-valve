@@ -179,6 +179,8 @@ void setup() {
     // Subscribe to valve control feed
     mqtt.subscribe(&valveControlFeed);
 
+    connectToMQTT(mqtt);
+
     Serial.println("Servo configured for pin " + String(kServoPin) + " (attach-on-demand)");
     Serial.println("MQTT TLS setup complete. Device will enter light sleep when idle...");
 
