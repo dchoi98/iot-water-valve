@@ -35,6 +35,8 @@ static constexpr const char* kPassword = "myPassword";
 
 // Hardware configuration
 Servo myServo;
+static constexpr int kLedPin = 3;
+static constexpr int kOffPin = 6;
 static constexpr int kWaterSensorPin = 4;
 static constexpr int kServoPin = 5;
 static constexpr int kCloseAngle = 9;
@@ -46,7 +48,7 @@ static unsigned long lastSensorRead = 0;
 static constexpr unsigned long kSensorInterval = 5000;
 
 // io.adafruit.com root CA
-const char* kAdafruitIoRootCa = \
+static const char kAdafruitIoRootCa[] PROGMEM = \
       "-----BEGIN CERTIFICATE-----\n"
       "MIIEjTCCA3WgAwIBAgIQDQd4KhM/xvmlcpbhMf/ReTANBgkqhkiG9w0BAQsFADBh\n"
       "MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\n"
@@ -82,7 +84,7 @@ Adafruit_MQTT_Publish waterSensorFeed = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAM
 Adafruit_MQTT_Subscribe valveControlFeed = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/valve-control");
 
 // Functions for hardware control
-const auto moveServoTo = [](Servo& servo, int position, int pin) -> void {
+void moveServoTo(Servo& servo, int position, int pin) {
     servo.attach(pin);
     servo.write(position);
     delay(500);
@@ -90,7 +92,7 @@ const auto moveServoTo = [](Servo& servo, int position, int pin) -> void {
     Serial.println("Servo moved to " + String(position) + " and detached for power savings");
 };
 
-const auto configurePowerManagement = []() -> void {
+void configurePowerManagement() {
     esp_pm_config_esp32_t pm_config = {
             .max_freq_mhz = 240,
             .min_freq_mhz = 80,
@@ -101,10 +103,11 @@ const auto configurePowerManagement = []() -> void {
     esp_wifi_set_max_tx_power(8);
 };
 
-const auto connectToWiFi = [](const char* network, const char* pass) -> void {
+void connectToWiFi(const char* network, const char* pass) {
     if (WiFi.status() == WL_CONNECTED) return;
 
     pinMode(LED_BUILTIN, OUTPUT);
+    pinMode(kLedPin, OUTPUT);
 
     while (WiFi.status() != WL_CONNECTED) {
         WiFi.begin(kSsid, kPassword);
@@ -112,18 +115,23 @@ const auto connectToWiFi = [](const char* network, const char* pass) -> void {
 
         for (int cycle = 0; cycle < 5; cycle++) {
             digitalWrite(LED_BUILTIN, LOW);
+            digitalWrite(kLedPin, HIGH);
             delay(200);
             digitalWrite(LED_BUILTIN, HIGH);
+            digitalWrite(kLedPin, LOW);
             delay(200);
         }
     }
+
+    digitalWrite(LED_BUILTIN, LOW);
+    pinMode(LED_BUILTIN, INPUT);
 
     Serial.print("Connected! IP: ");
     Serial.println(WiFi.localIP());
 };
 
 // MQTT connection function
-const auto connectToMQTT = [](Adafruit_MQTT_Client& mqttClient) -> void {
+void connectToMQTT(Adafruit_MQTT_Client& mqttClient) {
     if (mqttClient.connected()) return;
 
     Serial.println("Connecting to Adafruit IO MQTT...");
@@ -141,26 +149,30 @@ const auto connectToMQTT = [](Adafruit_MQTT_Client& mqttClient) -> void {
 };
 
 // Sensor data publishing
-const auto publishSensorData = [](Adafruit_MQTT_Publish& feed, int reading) -> void {
-    String json = "{\"reading\":" + String(reading) + "}";
+void publishSensorData(Adafruit_MQTT_Publish& feed, int reading) {
+    char json[32];
 
-    if (!feed.publish(json.c_str())) {
+    int len = snprintf(json, sizeof(json), "{\"reading\":%d}", reading);
+
+    if (len < 0 || len >= sizeof(json)) {
+        Serial.println("JSON buffer overflow!");
+        return;
+    }
+
+    if (!feed.publish(json)) {
         Serial.println("Failed to publish sensor data");
     } else {
-        Serial.println("Sensor data published: " + json);
+        Serial.print("Published: ");
+        Serial.println(json);
     }
-};
+}
 
 // Handle valve control commands
-const auto handleValveCommand = [](const char* command, Servo& servo, int pin) -> void {
-    String cmd = String(command);
-    cmd.toLowerCase();
-
-    if (cmd == "open") {
-        Serial.println("Received OPEN command via MQTT");
+void handleValveCommand(const char* command, Servo& servo, int pin) {
+    if (strcasecmp(command, "open") == 0) {
         moveServoTo(servo, kOpenAngle, pin);
-    } else if (cmd == "close") {
-        Serial.println("Received CLOSE command via MQTT");
+    }
+    else if (strcasecmp(command, "close") == 0) {
         moveServoTo(servo, kCloseAngle, pin);
     }
 };
@@ -173,8 +185,17 @@ void setup() {
     btStop();
     connectToWiFi(kSsid, kPassword);
 
+    size_t len = strlen_P(kAdafruitIoRootCa) + 1;  
+    char *ramCert = (char*) malloc(len);
+    if (!ramCert) {
+        Serial.println("OOM allocating cert!");
+        while (1) delay(10);
+    }
+
+    strcpy_P(ramCert, kAdafruitIoRootCa);
+
     // Set Adafruit IO's root CA
-    client.setCACert(kAdafruitIoRootCa);
+    client.setCACert(ramCert);
 
     // Subscribe to valve control feed
     mqtt.subscribe(&valveControlFeed);
@@ -207,6 +228,9 @@ void loop() {
         if (data >= 1000) {
             moveServoTo(myServo, kCloseAngle, kServoPin);
             publishSensorData(waterSensorFeed, data);
+            delay(500);
+            pinMode(kOffPin, OUTPUT);
+            digitalWrite(kOffPin, HIGH);
         }
 
         lastSensorRead = millis();
