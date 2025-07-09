@@ -185,17 +185,7 @@ void setup() {
     btStop();
     connectToWiFi(kSsid, kPassword);
 
-    size_t len = strlen_P(kAdafruitIoRootCa) + 1;  
-    char *ramCert = (char*) malloc(len);
-    if (!ramCert) {
-        Serial.println("OOM allocating cert!");
-        while (1) delay(10);
-    }
-
-    strcpy_P(ramCert, kAdafruitIoRootCa);
-
-    // Set Adafruit IO's root CA
-    client.setCACert(ramCert);
+    client.setCACert(kAdafruitIoRootCa);
 
     // Subscribe to valve control feed
     mqtt.subscribe(&valveControlFeed);
