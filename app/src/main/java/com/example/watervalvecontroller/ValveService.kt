@@ -18,6 +18,7 @@
 package com.example.watervalvecontroller
 
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeout
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import kotlin.coroutines.resume
@@ -29,6 +30,7 @@ class ValveService(
     private val brokerUrl = "ssl://io.adafruit.com:8883"
     private val clientId = "WaterValveController_${System.currentTimeMillis()}"
     private var mqttClient: MqttClient? = null
+    private val ackTopic = "$aioUsername/feeds/valve-ack"
 
     sealed class ValveResult {
         data object Success : ValveResult()
@@ -52,14 +54,8 @@ class ValveService(
                 keepAliveInterval = 30
             }
 
-            mqttClient?.setCallback(object : MqttCallback {
-                override fun connectionLost(cause: Throwable?) {}
-                override fun messageArrived(topic: String?, message: MqttMessage?) {}
-                override fun deliveryComplete(token: IMqttDeliveryToken?) {}
-            })
-
-            // Use synchronous connect
             mqttClient?.connect(options)
+            mqttClient?.subscribe(ackTopic, 1)
             continuation.resume(ValveResult.Success)
 
         } catch (e: Exception) {
@@ -67,31 +63,44 @@ class ValveService(
         }
     }
 
-    private suspend fun publishCommand(command: String): ValveResult = suspendCancellableCoroutine { continuation ->
-        try {
-            val topic = "$aioUsername/feeds/valve-control"
-            val payload = command.toByteArray()
-            val qos = 1
-            val retained = false
+    private suspend fun publishCommandWithAck(command: String): ValveResult {
+        return try {
+            withTimeout(5000L) {
+                suspendCancellableCoroutine { continuation ->
+                    val expectedAck = if (command == "open") "opened" else "closed"
 
-            mqttClient?.publish(topic, payload, qos, retained)
-            continuation.resume(ValveResult.Success)
+                    mqttClient?.setCallback(object : MqttCallback {
+                        override fun connectionLost(cause: Throwable?) {}
 
+                        override fun messageArrived(topic: String?, message: MqttMessage?) {
+                            if (topic == ackTopic && message?.toString() == expectedAck) {
+                                continuation.resume(ValveResult.Success)
+                            }
+                        }
+
+                        override fun deliveryComplete(token: IMqttDeliveryToken?) {}
+                    })
+
+                    // Publish command
+                    val topic = "$aioUsername/feeds/valve-control"
+                    mqttClient?.publish(topic, command.toByteArray(), 1, false)
+                }
+            }
         } catch (e: Exception) {
-            continuation.resume(ValveResult.Error("Command error: ${e.message}"))
+            ValveResult.Error("Timeout waiting for valve acknowledgment")
         }
     }
 
     suspend fun openValve(): ValveResult {
         return when (val connectionResult = ensureConnection()) {
-            is ValveResult.Success -> publishCommand("open")
+            is ValveResult.Success -> publishCommandWithAck("open")
             is ValveResult.Error -> connectionResult
         }
     }
 
     suspend fun closeValve(): ValveResult {
         return when (val connectionResult = ensureConnection()) {
-            is ValveResult.Success -> publishCommand("close")
+            is ValveResult.Success -> publishCommandWithAck("close")
             is ValveResult.Error -> connectionResult
         }
     }
