@@ -35,9 +35,10 @@ static constexpr const char* WIFI_PASSWORD = "myPassword";
 
 // Hardware pin configuration
 static constexpr int LED_PIN = 3;
-static constexpr int OFF_PIN = 6;
 static constexpr int WATER_SENSOR_PIN = 4;
 static constexpr int SERVO_PIN = 5;
+static constexpr int LATCH_INPUT_PIN = 6;
+static constexpr int LATCH_OUTPUT_PIN = 7;
 
 // Servo position constants
 static constexpr int VALVE_CLOSE_ANGLE = 9;
@@ -47,12 +48,17 @@ static constexpr int VALVE_OPEN_ANGLE = 98;
 static constexpr unsigned long SENSOR_READ_INTERVAL_MS = 5000;
 static constexpr int WATER_DETECTION_THRESHOLD = 1000;
 
+// Button timing
+static constexpr unsigned long SHUTOFF_HOLD_TIME = 2000;
+
 // Hardware objects
 Servo water_valve_servo;
 
 // Sensor state variables
 int water_sensor_reading = 0;
 static unsigned long last_sensor_read_time = 0;
+static unsigned long last_button_time = 0;
+static bool button_pressed = false;
 
 // io.adafruit.com root CA certificate
 static const char ADAFRUIT_IO_ROOT_CA[] PROGMEM = \
@@ -132,11 +138,12 @@ void connect_to_wifi(const char* network_ssid, const char* network_password)
         Serial.println("Connecting to WiFi...");
 
         for (int cycle = 0; cycle < 5; ++cycle) {
+            check_button();
             digitalWrite(LED_BUILTIN, LOW);
-            digitalWrite(LED_PIN, HIGH);
+            digitalWrite(LED_PIN, LOW);
             delay(200);
             digitalWrite(LED_BUILTIN, HIGH);
-            digitalWrite(LED_PIN, LOW);
+            digitalWrite(LED_PIN, HIGH);
             delay(200);
         }
     }
@@ -159,6 +166,7 @@ void connect_to_mqtt(Adafruit_MQTT_Client& mqtt_client_ref)
     int8_t connection_result;
 
     while ((connection_result = mqtt_client_ref.connect()) != 0) {
+        check_button();
         connect_to_wifi(WIFI_SSID, WIFI_PASSWORD);
         Serial.println(mqtt_client_ref.connectErrorString(connection_result));
         Serial.println("Retrying MQTT connection in 5 seconds...");
@@ -167,6 +175,21 @@ void connect_to_mqtt(Adafruit_MQTT_Client& mqtt_client_ref)
     }
 
     Serial.println("MQTT Connected!");
+}
+
+void check_button()
+{
+    if (digitalRead(LATCH_INPUT_PIN) == LOW && !button_pressed) {
+        button_pressed = true;
+        last_button_time = millis();
+    } else if (digitalRead(LATCH_INPUT_PIN) == HIGH) {
+        button_pressed = false;
+    }
+    if (millis() - last_button_time >= SHUTOFF_HOLD_TIME && button_pressed) {
+        digitalWrite(LATCH_OUTPUT_PIN, LOW);
+        digitalWrite(LED_PIN, LOW);
+        pinMode(LED_PIN, INPUT);
+    }
 }
 
 // Sensor data publishing
@@ -202,6 +225,11 @@ void handle_valve_command(const char* command, Servo& servo, int servo_pin)
 
 void setup()
 {
+    pinMode(LATCH_OUTPUT_PIN, OUTPUT);
+    digitalWrite(LATCH_OUTPUT_PIN, HIGH);
+
+    pinMode(LATCH_INPUT_PIN, INPUT_PULLUP);
+
     Serial.begin(115200);
     Serial.println("Starting ESP32 with Adafruit IO MQTT over TLS...");
 
@@ -224,6 +252,8 @@ void setup()
 
 void loop()
 {
+    check_button();
+
     // Maintain MQTT connection
     connect_to_mqtt(mqtt_client);
 
@@ -248,8 +278,7 @@ void loop()
             move_servo_to_position(water_valve_servo, VALVE_CLOSE_ANGLE, SERVO_PIN);
             publish_sensor_data(water_sensor_feed, water_sensor_reading);
             delay(500);
-            pinMode(OFF_PIN, OUTPUT);
-            digitalWrite(OFF_PIN, HIGH);
+            digitalWrite(LATCH_OUTPUT_PIN, LOW);
         }
 
         last_sensor_read_time = millis();
