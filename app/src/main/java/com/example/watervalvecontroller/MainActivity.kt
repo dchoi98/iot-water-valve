@@ -26,6 +26,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -33,6 +34,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -80,25 +82,61 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-object AppColors {
-    val Primary = Color(0xFF2260D3)
-    val Secondary = Color(0xFFBC3843)
-    val Background = Color(0xFFF8FAFC)
-    val Surface = Color.White
-    val TextPrimary = Color(0xFF1E293B)
-    val TextSecondary = Color(0xFF64748B)
-    val Warning = Color(0xFFF59E0B)
+object AppColorsLight {
+    val Primary = Color(0xFF002D72)
+    val Secondary = Color(0xFFFF9E1B)
+    val Background = Color.White
+    val Surface = Color(0xFFF5F5F5)
+    val TextPrimary = Color(0xFF31261D)
+    val TextSecondary = Color(0xFF666666)
+    val Warning = Color(0xFFCF4520)
+}
+
+object AppColorsDark {
+    val Primary = Color(0xFF68ACE5)
+    val Secondary = Color(0xFFF1C400)
+    val Background = Color(0xFF121212)
+    val Surface = Color(0xFF1E1E1E)
+    val TextPrimary = Color.White
+    val TextSecondary = Color(0xFFB3B3B3)
+    val Warning = Color(0xFFF56600)
 }
 
 @Composable
-fun ValveControllerTheme(content: @Composable () -> Unit) {
+fun ValveControllerTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    dynamicColor: Boolean = false,
+    content: @Composable () -> Unit
+) {
+    val colorScheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            if (darkTheme) dynamicDarkColorScheme(LocalContext.current)
+            else dynamicLightColorScheme(LocalContext.current)
+        }
+        darkTheme -> darkColorScheme(
+            primary = AppColorsDark.Primary,
+            secondary = AppColorsDark.Secondary,
+            background = AppColorsDark.Background,
+            surface = AppColorsDark.Surface,
+            onPrimary = Color.White,
+            onSecondary = Color.White,
+            onBackground = AppColorsDark.TextPrimary,
+            onSurface = AppColorsDark.TextSecondary
+        )
+        else -> lightColorScheme(
+            primary = AppColorsLight.Primary,
+            secondary = AppColorsLight.Secondary,
+            background = AppColorsLight.Background,
+            surface = AppColorsLight.Surface,
+            onPrimary = Color.White,
+            onSecondary = Color.White,
+            onBackground = AppColorsLight.TextPrimary,
+            onSurface = AppColorsLight.TextSecondary
+        )
+    }
+
     MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = AppColors.Primary,
-            secondary = AppColors.Secondary,
-            background = AppColors.Background,
-            surface = AppColors.Surface
-        ),
+        colorScheme = colorScheme,
         content = content
     )
 }
@@ -110,7 +148,7 @@ fun ValveControllerApp(viewModel: ValveViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(AppColors.Background)
+            .background(MaterialTheme.colorScheme.background)
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -140,24 +178,26 @@ fun AppTitle() {
         text = "Water Valve Controller",
         fontSize = 24.sp,
         fontWeight = FontWeight.Bold,
-        color = AppColors.TextPrimary,
+        color = MaterialTheme.colorScheme.onBackground,
         textAlign = TextAlign.Center
     )
 }
 
 @Composable
 fun StatusIndicator(uiState: ValveViewModel.UiState, onDismissAlert: () -> Unit = {}) {
+    val warningColor = if (isSystemInDarkTheme()) AppColorsDark.Warning else AppColorsLight.Warning
+
     val (statusText, statusColor, showDismiss) = when (uiState) {
-        is ValveViewModel.UiState.Ready -> Triple("Ready", AppColors.TextSecondary, false)
-        is ValveViewModel.UiState.OpeningValve -> Triple("Opening valve...", AppColors.TextSecondary, false)
-        is ValveViewModel.UiState.ClosingValve -> Triple("Closing valve...", AppColors.TextSecondary, false)
-        is ValveViewModel.UiState.Success -> Triple(uiState.message, AppColors.TextSecondary, false)
-        is ValveViewModel.UiState.Error -> Triple(uiState.message, AppColors.TextSecondary, false)
+        is ValveViewModel.UiState.Ready -> Triple("Ready", MaterialTheme.colorScheme.onSurface, false)
+        is ValveViewModel.UiState.OpeningValve -> Triple("Opening valve...", MaterialTheme.colorScheme.onSurface, false)
+        is ValveViewModel.UiState.ClosingValve -> Triple("Closing valve...", MaterialTheme.colorScheme.onSurface, false)
+        is ValveViewModel.UiState.Success -> Triple(uiState.message, MaterialTheme.colorScheme.onSurface, false)
+        is ValveViewModel.UiState.Error -> Triple(uiState.message, MaterialTheme.colorScheme.onSurface, false)
         is ValveViewModel.UiState.SensorAlert -> {
             val time = java.time.Instant.ofEpochMilli(uiState.timestamp)
                 .atZone(java.time.ZoneId.systemDefault())
                 .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-            Triple("⚠️ Water detected $time", AppColors.Warning, true)
+            Triple("⚠️ Water detected $time", warningColor, true)
         }
     }
 
@@ -166,7 +206,7 @@ fun StatusIndicator(uiState: ValveViewModel.UiState, onDismissAlert: () -> Unit 
             .fillMaxWidth()
             .height(if (showDismiss) 72.dp else 48.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -184,7 +224,7 @@ fun StatusIndicator(uiState: ValveViewModel.UiState, onDismissAlert: () -> Unit 
             if (showDismiss) {
                 Spacer(modifier = Modifier.height(4.dp))
                 TextButton(onClick = onDismissAlert) {
-                    Text("Dismiss", fontSize = 12.sp, color = AppColors.TextSecondary)
+                    Text("Dismiss", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
             }
         }
@@ -210,7 +250,7 @@ fun ControlButtons(
     ) {
         ModernButton(
             text = "OPEN VALVE",
-            backgroundColor = AppColors.Primary,
+            backgroundColor = MaterialTheme.colorScheme.primary,
             enabled = buttonsEnabled,
             onClick = onOpenClicked,
             modifier = Modifier.weight(1f)
@@ -218,7 +258,7 @@ fun ControlButtons(
 
         ModernButton(
             text = "CLOSE VALVE",
-            backgroundColor = AppColors.Secondary,
+            backgroundColor = MaterialTheme.colorScheme.secondary,
             enabled = buttonsEnabled,
             onClick = onCloseClicked,
             modifier = Modifier.weight(1f)

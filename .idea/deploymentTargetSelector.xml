@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-06-11T01:10:36.277331300Z">
+        <DropdownSelection timestamp="2025-09-27T04:11:02.436101400Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=RFCN80ANYMH" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\derri\.android\avd\Medium_Phone.avd" />
             </handle>
           </Target>
         </DropdownSelection>
@@ -15,10 +15,10 @@
       </SelectionState>
       <SelectionState runConfigName="Water Valve Controller">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-07-10T02:09:10.489622400Z">
+        <DropdownSelection timestamp="2025-09-27T04:09:46.694859Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=RFCN80ANYMH" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\derri\.android\avd\Medium_Phone.avd" />
             </handle>
           </Target>
         </DropdownSelection>

@@ -24,8 +24,8 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import kotlin.coroutines.resume
 
 class ValveService(
-    private val aioUsername: String = "myUsername",
-    private val aioKey: String = "myKey"
+    private val aioUsername: String = BuildConfig.secretAioUser,
+    private val aioKey: String = BuildConfig.secretAioKey
 ) {
     private val brokerUrl = "ssl://io.adafruit.com:8883"
     private val clientId = "WaterValveController_${System.currentTimeMillis()}"
@@ -50,8 +50,8 @@ class ValveService(
                 userName = aioUsername
                 password = aioKey.toCharArray()
                 isCleanSession = true
-                connectionTimeout = 10
-                keepAliveInterval = 30
+                connectionTimeout = 30
+                keepAliveInterval = 300
             }
 
             mqttClient?.connect(options)

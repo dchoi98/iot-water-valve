@@ -1,0 +1,30 @@
+Manufacturer,Manufacturer Part Number,Supplier,Supplier Part Number,Quantity,Description
+Adafruit,6091,Adafruit,6091,1,Adafruit bq25185 USB / DC / Solar Charger Board
+Adafruit,261,Adafruit,261,1,JST PH 2-Pin Cable - Female Connector 100mm
+Adafruit,3955,Adafruit,3955,1,JST PH 2mm 4-Pin to Male Header Cable - I2C STEMMA Cable - 200mm
+Adafruit,3894,Adafruit,3894,1,STEMMA JST PH 2mm 3-Pin to Female Socket Cable - 200mm
+Alices,FZ0083 (from kit),Amazon,B08GHB2P4X ,2,"PG11 Cable Gland, Nylon, Hex Nut Included"
+Alices,FZ0083 (from kit),Amazon,B08GHB2P4X ,1,"PG13.5 Cable Gland, Nylon, Hex Nut Included"
+Aoje Link-Electric,785387231710,Amazon,B097T8NWG9 ,1,"Momentary Push Button Switch, Green LED, 19 mm mounting hole, Hex Nut Included"
+Bud Industries,IPV-67601-B,Digikey,377-IPV-67601-B-ND,1,"IP67 Moisture Blocking Air Vent, M6 x 1.5, 0.55 Inches Diameter, Black, Hex Nut Included"
+Bud Industries,PIP-11767,Amazon,B00OG1X29U ,1,"Polycarbonate Enclosure with Captive Screws, 10% Fiberglass Reinforced, Includes 4X M4x8 Screws"
+Generic,ESP32-C3 SuperMini,Aliexpress,,1,
+HiLetgo,40P-2.54-HiLetgo ,Amazon,B07R5QDL8D ,1,40P 2.54mm Pitch Single Row Pin Header Strip (yields 2x 6p pieces and 2x 8p pieces)
+Keyestudio,KS0048,Keyestudio,KS0048,1,Keyestudio Water Sensor
+Letool International,B07HF46Q4R (from kit),Amazon,B07HF46Q4R ,2,M1.7x5 Phillips Pan Head Self Tapping Screw
+Rain Bird,BVAL25-2S,Home Depot,204751238,1,¼ in. Barbed Shut-Off Valve for Drip Irrigation
+Rain Bird,T22-100SX,Home Depot,202078362,1,¼ in. x 100 ft. Distribution Tubing for Drip Irrigation (yields 2x 120 mm pieces)
+Shenzhen Pkcell Battery,LP785060,Adafruit,328,1,"Lithium Ion Polymer Battery – 3.7 V, 2500 mAh"
+Tower Pro,SG92R,Adafruit,4326,1,"Standard SG92R with JST connector added by Adafruit, Adafruit Product ID: 4326, Includes Mounting Screws and Servo Horn"
+VGBUY,VG30603 (from kit),Amazon,B0D1XJ766V ,2,"Hex Socket Head Cap Screw, M3x10, 304 Stainless Steel"
+VGBUY,VG30603 (from kit),Amazon,B0D1XJ766V ,4,"M3 Flat Washer, 304 Stainless Steel"
+VGBUY,VG30603 (from kit),Amazon,B0D1XJ766V ,2,"M3 Nut, 304 Stainless Steel"
+VGBUY,VG30603 (from kit),Amazon,B0D1XJ766V ,4,"M3 Split Lock Washer, 304 Stainless Steel"
+VKKM,TJ310369 (from kit),Temu,,8,M3x6 Phillips Half Round Head Self Tapping Screw
+Voltaic Systems,P124,Adafruit,5368,1,1.2 Watt 6 Volt Small Solar Panel – ETFE
+,frame.3mf,,,1,"Internal Frame (3D Printed, PETG, 3MF File in /hardware/3d_models/)"
+,gasket.3mf,,,1,"Gasket for USB-C and Solar Panel Cables (3D Printed, PETG, 3MF File in /hardware/3d_models/)"
+,pcb.epro,,,1,"Motherboard PCB (Fabricated), FR-4, 2-layer, 1.6 mm thick, Lead-Free HASL (EasyEDA Project File in /hardware/)"
+,sunshade_back.3mf,,,1,"Sunshade Back for Securing Solar Panel (3D Printed, PETG, 3MF File in /hardware/3d_models/)"
+,sunshade.3mf,,,1,"Sunshade (3D Printed, PETG, 3MF File in /hardware/3d_models/)"
+,valve_coupler.3mf,,,1,"Valve Coupler (3D Printed, PETG, 3MF File in /hardware/3d_models/)"

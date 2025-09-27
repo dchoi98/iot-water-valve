@@ -13,3 +13,4 @@
 .externalNativeBuild
 .cxx
 local.properties
+esp32_secrets.h

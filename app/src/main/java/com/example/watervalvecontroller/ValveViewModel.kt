@@ -86,8 +86,8 @@ class ValveViewModel(application: Application) : AndroidViewModel(application) {
     private fun observeSensorEvents() {
         SensorMonitorService.globalSensorEvents
             .onEach { event ->
-                // Update UI state when water detected (reading >= 1000 or triggered flag)
-                if (event.reading >= 1000) {
+                // Update UI state when water detected
+                if (event.waterDetected == "true") {
                     _uiState.value = UiState.SensorAlert(event.timestamp)
                 }
             }

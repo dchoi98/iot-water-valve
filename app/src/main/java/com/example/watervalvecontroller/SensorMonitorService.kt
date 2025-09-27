@@ -26,8 +26,6 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
-import org.json.JSONObject
-import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 /**
@@ -57,16 +55,15 @@ class SensorMonitorService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var mqttClient: MqttClient? = null
-    private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
     // Adafruit IO credentials
-    private val aioUsername = "myUsername"
-    private val aioKey = "myKey"
+    private val aioUsername = BuildConfig.secretAioUser
+    private val aioKey = BuildConfig.secretAioKey
     private val brokerUrl = "ssl://io.adafruit.com:8883"
     private val clientId = "WaterSensorMonitor_${System.currentTimeMillis()}"
 
     data class SensorEvent(
-        val reading: Int,
+        val waterDetected: String,
         val timestamp: Long = System.currentTimeMillis()
     )
 
@@ -120,8 +117,8 @@ class SensorMonitorService : Service() {
                     userName = aioUsername
                     password = aioKey.toCharArray()
                     isCleanSession = true
-                    connectionTimeout = 10
-                    keepAliveInterval = 30
+                    connectionTimeout = 30
+                    keepAliveInterval = 300
                 }
 
                 mqttClient?.setCallback(createMqttCallback())
@@ -157,9 +154,8 @@ class SensorMonitorService : Service() {
 
     private fun handleSensorMessage(data: String) {
         try {
-            val json = JSONObject(data)
             val event = SensorEvent(
-                reading = json.getInt("reading")
+                waterDetected = data
             )
 
             serviceScope.launch {
@@ -167,9 +163,9 @@ class SensorMonitorService : Service() {
             }
 
             // Update persistent alert state if water detected
-            if (event.reading >= 1000) {
+            if (event.waterDetected == "true") {
                 _alertState.value = event
-                showWaterDetectedNotification()
+                showWaterDetectedNotification(event.timestamp)
             }
 
         } catch (e: Exception) {
@@ -177,8 +173,10 @@ class SensorMonitorService : Service() {
         }
     }
 
-    private fun showWaterDetectedNotification() {
-        val currentDateTime = LocalDateTime.now().format(dateTimeFormatter)
+    private fun showWaterDetectedNotification(timestamp: Long) {
+        val formattedTime = java.time.Instant.ofEpochMilli(timestamp)
+            .atZone(java.time.ZoneId.systemDefault())
+            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -190,7 +188,7 @@ class SensorMonitorService : Service() {
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("⚠️ Water Detected!")
-            .setContentText("Valve automatically closed at $currentDateTime")
+            .setContentText("Valve automatically closed at $formattedTime")
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
