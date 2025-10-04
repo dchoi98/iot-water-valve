@@ -19,10 +19,7 @@
 6. Go to ```Files > Preferences``` to open the Preferences window. Paste the following link into the ```Additional boards manager URLs``` field: ```https://espressif.github.io/arduino-esp32/package_esp32_index.json```.
 7. Open the Boards Manager tab on the left side of the IDE. Search for and install the esp32 platform by Espressif Systems.
 8. Open the Library Manager tab on the left side of the IDE. Search for and install the following libraries:
-   - WiFi101
-   - Adafruit FONA Library
    - Adafruit MQTT Library
-   - Adafruit SleepyDog Library
    - ArduinoOTA
    - ESP32Servo
 9. Connect the ESP32-C3 SuperMini to your computer via USB.

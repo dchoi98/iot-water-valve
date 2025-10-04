@@ -264,7 +264,7 @@ void loop()
         last_sensor_read_time = millis();
     }
 
-    // Close valve if opened for 15 minutes
+    // Close valve if opened for 30 minutes
     if (millis() - last_valve_open_time > VALVE_OPEN_INTERVAL && valve_open) {
         move_servo_to_position(water_valve_servo, VALVE_CLOSE_ANGLE, SERVO_PIN);
         valve_open = false;
