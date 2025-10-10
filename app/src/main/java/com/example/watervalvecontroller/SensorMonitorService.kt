@@ -118,7 +118,7 @@ class SensorMonitorService : Service() {
                     password = aioKey.toCharArray()
                     isCleanSession = true
                     connectionTimeout = 30
-                    keepAliveInterval = 300
+                    keepAliveInterval = 60
                 }
 
                 mqttClient?.setCallback(createMqttCallback())

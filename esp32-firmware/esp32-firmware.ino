@@ -51,7 +51,7 @@ static constexpr unsigned long SHUTOFF_HOLD_TIME = 2000;
 static constexpr unsigned long VALVE_OPEN_INTERVAL = 1800000;
 
 // MQTT ping timing
-static constexpr unsigned long MQTT_PING_INTERVAL = 300000;
+static constexpr unsigned long MQTT_PING_INTERVAL = 60000;
 
 // Hardware objects
 Servo water_valve_servo;
@@ -116,13 +116,14 @@ void move_servo_to_position(Servo& servo, uint8_t position, uint8_t pin)
 
 void configure_power_management()
 {
-    esp_pm_config_esp32_t pm_config = {
+    esp_pm_config_t pm_config = {
             .max_freq_mhz = 80,
-            .min_freq_mhz = 40
+            .min_freq_mhz = 40,
+            .light_sleep_enable = true
     };
     esp_pm_configure(&pm_config);
     esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
-    esp_wifi_set_max_tx_power(8);
+    esp_wifi_set_max_tx_power(80);
 }
 
 void connect_to_wifi(const char* network_ssid, const char* network_password)
@@ -182,7 +183,7 @@ void check_button()
     if (millis() - last_button_time > SHUTOFF_HOLD_TIME && button_pressed) {
         digitalWrite(LATCH_OUTPUT_PIN, LOW);
         digitalWrite(LED_PIN, LOW);
-        pinMode(LED_PIN, INPUT);
+        esp_deep_sleep_start();
     }
 }
 
@@ -196,6 +197,9 @@ void publish_sensor_data(Adafruit_MQTT_Publish& feed, int reading)
 // Handle valve control commands
 void handle_valve_command(const char* command, Servo& servo, uint8_t servo_pin)
 {
+    if (!command) return;
+    size_t len = strnlen(command, 64);
+    if (len == 0 || len >= 64) return;
     if (strcasecmp(command, "open") == 0) {
         move_servo_to_position(servo, VALVE_OPEN_ANGLE, servo_pin);
         last_valve_open_time = millis();

@@ -51,7 +51,7 @@ class ValveService(
                 password = aioKey.toCharArray()
                 isCleanSession = true
                 connectionTimeout = 30
-                keepAliveInterval = 300
+                keepAliveInterval = 60
             }
 
             mqttClient?.connect(options)
