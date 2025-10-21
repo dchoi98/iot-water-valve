@@ -1,5 +1,5 @@
 # IoT Water Valve
-This project includes an ESP32-based water-valve controller and its Android companion app. It utilizes secure MQTT communication via Adafruit IO for real-time control of the valve from anywhere, with built-in leak detection and emergency shutoff. 
+This project includes an ESP32-based water-valve controller and its Android companion app. It utilizes secure MQTT communication via Adafruit IO for real-time control of the valve from anywhere, with built-in leak detection and emergency shutoff. Design decisions and FMEA are explained in ```design_decisions.md``` and ```reliability_and_safety.md``` in ```docs/```.
 
 ## Key Features
 - ESP32-C3 SuperMini microcontroller
